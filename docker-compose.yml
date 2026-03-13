@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+
+  # ═══════════════════════════════
+  # SERVICE 1: PHP Laravel App
+  # ═══════════════════════════════
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: RestaurantTask2_app    # ← nama container PHP
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - .:/var/www                         # sync folder project dengan container
+    networks:
+      - RestaurantTask2_network
+
+  # ═══════════════════════════════
+  # SERVICE 2: Nginx Web Server
+  # ═══════════════════════════════
+  webserver:
+    image: nginx:alpine
+    container_name: RestaurantTask2_nginx  # ← nama container Nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"                          # browser guna port 8080
+    volumes:
+      - .:/var/www
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+    networks:
+      - RestaurantTask2_network
+    depends_on:
+      - app                                # nginx tunggu app ready dulu
+
+  # ═══════════════════════════════
+  # SERVICE 3: MySQL Database
+  # ═══════════════════════════════
+  db:
+    image: mysql:8.0
+    container_name: RestaurantTask2_db     # ← nama container MySQL
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: restauranttask2_db
+      MYSQL_ROOT_PASSWORD: Huffazpro1!
+      MYSQL_PASSWORD: Huffazpro1!
+      MYSQL_USER: restauranttask2_user
+    ports:
+      - "3307:3306"
+    volumes:
+      - RestaurantTask2_dbdata:/var/lib/mysql
+    networks:
+      - RestaurantTask2_network
+
+# ═══════════════════════════════
+# NETWORK — Supaya containers boleh communicate
+# ═══════════════════════════════
+networks:
+  RestaurantTask2_network:
+    driver: bridge
+
+# ═══════════════════════════════
+# VOLUME — Supaya data MySQL tak hilang walaupun container restart
+# ═══════════════════════════════
+volumes:
+  RestaurantTask2_dbdata:
+    driver: local
