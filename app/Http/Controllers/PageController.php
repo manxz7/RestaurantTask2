@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 // Kalau tak import, PHP tak tahu Booking tu apa
 use App\Models\Booking;
 use App\Models\Contact;
+use App\Models\Menu;
 
 class PageController extends Controller
 {
@@ -15,10 +16,23 @@ class PageController extends Controller
     // FUNCTION 1: Papar home page
     // ═══════════════════════════════════
     public function home()
-    {
-        return view('pages.home');
-    }
+{
+    // Ambil semua menu dari database, group by category
+    $menus = Menu::where('is_available', true)->get()->groupBy('category');
+    // groupBy = susun ikut kategori
+    // Contoh result:
+    // 'starters' => [menu1, menu2]
+    // 'lunch' => [menu3, menu4]
 
+    // Hantar $menus ke view
+    return view('pages.home', compact('menus'));
+}
+
+
+public function cart()
+{
+    return view('pages.cart');
+}
     // ═══════════════════════════════════
     // FUNCTION 2: Simpan booking
     // Dipanggil bila user submit booking form
@@ -78,5 +92,44 @@ return redirect('/#book-a-table')->with('booking_success', 'Booking berjaya! Kam
         ]);
 
         return redirect('/')->with('contact_success', 'Mesej berjaya dihantar!');
+
+    
     }
+
+    public function checkout()
+{
+    return view('pages.checkout');
+}
+
+public function placeOrder(Request $request)
+{
+    $request->validate([
+        'name'   => 'required|string',
+        'email'  => 'required|email',
+        'phone'  => 'required|string',
+        'date'   => 'required|date',
+        'time'   => 'required',
+        'people' => 'required|integer|min:1',
+    ]);
+
+    // Simpan booking
+    $booking = Booking::create([
+        'name'    => $request->name,
+        'email'   => $request->email,
+        'phone'   => $request->phone,
+        'date'    => $request->date,
+        'time'    => $request->time,
+        'people'  => $request->people,
+        'message' => $request->message ?? '',
+        'status'  => 'confirmed', // terus confirmed — mock payment
+    ]);
+
+    return redirect('/order-confirmed/' . $booking->id);
+}
+
+public function orderConfirmed($id)
+{
+    $booking = Booking::findOrFail($id);
+    return view('pages.order-confirmed', compact('booking'));
+}
 }
